@@ -91,7 +91,6 @@ yarn-error.log*
 
 # Local env variables & secrets
 .env
-.env.*
 !.env.example
 *.local
 secrets.*
