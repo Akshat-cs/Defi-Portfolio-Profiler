@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Analyze Ethereum wallet DeFi activity and calculate your DeFi Strategy Score. Track transaction count, protocol interactions, asset holdings, and more using real-time blockchain data from Bitquery."
+    />
+    <meta
+      name="keywords"
+      content="DeFi score, Ethereum wallet analysis, DeFi portfolio tracker, blockchain analytics, wallet scoring, DeFi strategy, on-chain analysis"
+    />
+    <meta name="author" content="DeFi Address Profiler" />
+    <title>
+      DeFi Address Profiler - Analyze Your Ethereum Wallet's DeFi Activity
+    </title>
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="DeFi Address Profiler - Analyze Your Ethereum Wallet's DeFi Activity"
+    />
+    <meta
+      property="og:description"
+      content="Calculate your DeFi Strategy Score by analyzing transaction patterns, protocol interactions, and asset holdings on Ethereum."
+    />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta
+      property="twitter:title"
+      content="DeFi Address Profiler - Analyze Your Ethereum Wallet's DeFi Activity"
+    />
+    <meta
+      property="twitter:description"
+      content="Calculate your DeFi Strategy Score by analyzing transaction patterns, protocol interactions, and asset holdings on Ethereum."
+    />
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.6;
+        color: #1a1a1a;
+        background: #fafafa;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      header {
+        background: #fff;
+        border-bottom: 1px solid #e5e5e5;
+        padding: 24px 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      header h1 {
+        font-size: 24px;
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      .hero {
+        padding: 60px 0;
+        text-align: center;
+      }
+
+      .hero h2 {
+        font-size: 42px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: #1a1a1a;
+      }
+
+      .hero p {
+        font-size: 18px;
+        color: #666;
+        max-width: 600px;
+        margin: 0 auto 40px;
+      }
+
+      .search-box {
+        max-width: 600px;
+        margin: 0 auto 60px;
+      }
+
+      .search-form {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .search-input {
+        flex: 1;
+        padding: 14px 18px;
+        font-size: 16px;
+        border: 2px solid #e5e5e5;
+        border-radius: 8px;
+        transition: border-color 0.2s;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #0066ff;
+      }
+
+      .search-btn {
+        padding: 14px 32px;
+        font-size: 16px;
+        font-weight: 500;
+        background: #0066ff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .search-btn:hover {
+        background: #0052cc;
+      }
+
+      .search-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      .error-message {
+        background: #fee;
+        color: #c33;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        display: none;
+      }
+
+      .results {
+        display: none;
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        margin-bottom: 60px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      .score-header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .final-score {
+        font-size: 64px;
+        font-weight: 700;
+        color: #0066ff;
+        margin: 20px 0;
+      }
+
+      .score-label {
+        font-size: 18px;
+        color: #666;
+        margin-bottom: 8px;
+      }
+
+      .pillars {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+
+      .pillar-card {
+        background: #f8f9fa;
+        padding: 24px;
+        border-radius: 8px;
+      }
+
+      .pillar-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .pillar-score {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+      }
+
+      .pillar-detail {
+        font-size: 14px;
+        color: #666;
+      }
+
+      .info-section {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        margin-bottom: 40px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      .info-section h3 {
+        font-size: 28px;
+        font-weight: 600;
+        margin-bottom: 24px;
+        color: #1a1a1a;
+      }
+
+      .info-section p {
+        color: #666;
+        margin-bottom: 16px;
+        line-height: 1.8;
+      }
+
+      .info-section ul {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      .info-section li {
+        padding: 12px 0;
+        border-bottom: 1px solid #e5e5e5;
+      }
+
+      .info-section li:last-child {
+        border-bottom: none;
+      }
+
+      .info-section strong {
+        color: #1a1a1a;
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .faq-item {
+        margin-bottom: 24px;
+      }
+
+      .faq-question {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 8px;
+      }
+
+      .faq-answer {
+        color: #666;
+        line-height: 1.8;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+
+      .spinner {
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #0066ff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 16px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      footer {
+        background: #1a1a1a;
+        color: #999;
+        padding: 40px 0;
+        margin-top: 80px;
+      }
+
+      footer p {
+        text-align: center;
+        font-size: 14px;
+      }
+
+      .data-source {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 24px;
+        border-left: 4px solid #0066ff;
+      }
+
+      .data-source p {
+        margin: 0;
+        font-size: 14px;
+        color: #666;
+      }
+
+      .recent-section {
+        background: white;
+        border-radius: 12px;
+        padding: 40px;
+        margin-bottom: 40px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      .recent-section h3 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 24px;
+        color: #1a1a1a;
+      }
+
+      .recent-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .recent-table thead {
+        border-bottom: 2px solid #e5e5e5;
+      }
+
+      .recent-table th {
+        text-align: left;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .recent-table td {
+        padding: 16px;
+        font-size: 15px;
+        color: #1a1a1a;
+      }
+
+      .recent-table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .recent-table tbody tr:last-child {
+        border-bottom: none;
+      }
+
+      .recent-table tbody tr:hover {
+        background: #f8f9fa;
+      }
+
+      .address-link {
+        color: #0066ff;
+        text-decoration: none;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+      }
+
+      .address-link:hover {
+        text-decoration: underline;
+      }
+
+      .score-cell {
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      .empty-recent {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+        font-style: italic;
+      }
+
+      @media (max-width: 768px) {
+        .hero h2 {
+          font-size: 32px;
+        }
+
+        .search-form {
+          flex-direction: column;
+        }
+
+        .pillars {
+          grid-template-columns: 1fr;
+        }
+
+        .final-score {
+          font-size: 48px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <h1>DeFi Address Profiler</h1>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container">
+          <h2>Analyze Your Ethereum Wallet's DeFi Activity</h2>
+          <p>
+            Calculate your DeFi Strategy Score by analyzing transaction
+            patterns, protocol interactions, and asset holdings. Get insights
+            into your wallet's engagement with decentralized finance protocols.
+          </p>
+
+          <div class="search-box">
+            <form class="search-form" id="searchForm">
+              <input
+                type="text"
+                class="search-input"
+                id="addressInput"
+                placeholder="Enter Ethereum address (0x...)"
+                required
+                pattern="^0x[a-fA-F0-9]{40}$"
+              />
+              <button type="submit" class="search-btn" id="searchBtn">
+                Analyze
+              </button>
+            </form>
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="loading" id="loading">
+              <div class="spinner"></div>
+              <p>Analyzing wallet activity... This may take a minute or two.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="container">
+        <div class="recent-section">
+          <h3>Recent 5 Wallets Analyzed</h3>
+          <div id="recentWallets">
+            <div class="empty-recent">
+              No wallets analyzed yet. Be the first!
+            </div>
+          </div>
+        </div>
+
+        <div class="results" id="results">
+          <div class="score-header">
+            <div class="score-label">DeFi Strategy Score</div>
+            <div class="final-score" id="finalScore">-</div>
+            <div style="color: #666; font-size: 14px" id="addressDisplay"></div>
+          </div>
+
+          <div class="pillars" id="pillars"></div>
+        </div>
+
+        <div class="info-section">
+          <h3>Understanding Your DeFi Strategy Score</h3>
+          <p>
+            The DeFi Strategy Score measures your wallet's strategic engagement
+            and sophistication within the DeFi ecosystem, independent of total
+            capital deployed. The score ranges from 25 to 100, calculated using
+            four key pillars:
+          </p>
+
+          <ul style="margin-top: 24px">
+            <li>
+              <strong>P1: Transaction Count</strong>
+              Measures your wallet's overall activity level. Scores are based on
+              the total number of successful transactions in the past year, with
+              100+ transactions achieving the maximum score.
+            </li>
+            <li>
+              <strong>P2: Transaction Types</strong>
+              Evaluates the diversity of your DeFi interactions. We track eight
+              activity types: DEX Swaps, Lending/Borrowing, Staking, Liquidity
+              Provision, NFT Trading, Governance, Bridging, and Yield Farming.
+              Engaging with 5+ unique types achieves the maximum score.
+            </li>
+            <li>
+              <strong>P3: Protocols Used</strong>
+              Assesses how widely you've interacted with the DeFi ecosystem. We
+              monitor interactions with major protocols including Uniswap, Aave,
+              Lido, Compound, and others. Using 8+ unique protocols achieves the
+              maximum score.
+            </li>
+            <li>
+              <strong>P4: Assets Held</strong>
+              Measures the diversity of your portfolio. We count ERC-20 tokens
+              with balances exceeding $10 USD and individual NFT holdings.
+              Holding 15+ unique assets achieves the maximum score.
+            </li>
+          </ul>
+
+          <div class="data-source">
+            <p>
+              <strong>Data Source:</strong> All analysis is performed using
+              real-time blockchain data from Bitquery, a leading blockchain data
+              analytics platform. We query Ethereum mainnet transactions, smart
+              contract interactions, token balances, and NFT holdings to
+              calculate your score.
+            </p>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3>Frequently Asked Questions</h3>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              How is the DeFi Strategy Score calculated?
+            </div>
+            <div class="faq-answer">
+              The score uses a base of 25 points plus a weighted average of four
+              pillar scores (P1-P4). Each pillar is scored from 0-100 points
+              based on specific metrics. The average pillar score is multiplied
+              by 0.75 and added to the base score of 25, resulting in a final
+              score between 25 and 100.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              What time period does the analysis cover?
+            </div>
+            <div class="faq-answer">
+              The analysis examines your wallet's activity over the past 1 year.
+              This includes all successful transactions, protocol interactions,
+              and current asset holdings as of the analysis date.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Where does the data come from?</div>
+            <div class="faq-answer">
+              All data is sourced from Bitquery's GraphQL API, which provides
+              real-time access to Ethereum blockchain data. Bitquery aggregates
+              and indexes blockchain data, allowing us to query transaction
+              history, smart contract interactions, token balances, and NFT
+              holdings efficiently.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Which protocols are tracked?</div>
+            <div class="faq-answer">
+              We track interactions with major DeFi protocols including Aave (v2
+              and v3), Compound (v2 and v3), Uniswap V3, Lido, RocketPool, Yearn
+              Finance, Convex Finance, Sparklend, Morpho, and others. The
+              complete list includes over 50 protocol contract addresses across
+              lending, staking, liquidity provision, bridging, and yield farming
+              categories.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              Is my wallet address stored or tracked?
+            </div>
+            <div class="faq-answer">
+              No. We do not store, track, or log any wallet addresses. All
+              analysis is performed in real-time using publicly available
+              blockchain data. Your privacy is maintained as we only query
+              on-chain information that is already publicly accessible.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">
+              Why might my score be lower than expected?
+            </div>
+            <div class="faq-answer">
+              The score focuses on strategic engagement rather than capital
+              deployed. A lower score might indicate limited protocol diversity,
+              fewer transaction types, or a shorter activity history. The score
+              is designed to measure sophistication and engagement patterns, not
+              wealth or total value locked.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">How often should I check my score?</div>
+            <div class="faq-answer">
+              Your score updates in real-time with each analysis. As you engage
+              with more DeFi protocols, diversify your transaction types, and
+              expand your asset holdings, your score will reflect these changes.
+              There's no limit to how often you can analyze your wallet.
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="container">
+        <p>DeFi Address Profiler - Powered by Bitquery Blockchain Data</p>
+        <p style="margin-top: 8px; font-size: 12px">
+          Analyzing Ethereum wallet activity and DeFi engagement patterns
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      const form = document.getElementById("searchForm");
+      const addressInput = document.getElementById("addressInput");
+      const searchBtn = document.getElementById("searchBtn");
+      const errorMessage = document.getElementById("errorMessage");
+      const loading = document.getElementById("loading");
+      const results = document.getElementById("results");
+      const recentWalletsDiv = document.getElementById("recentWallets");
+
+      // Load recent wallets on page load
+      loadRecentWallets();
+
+      async function loadRecentWallets() {
+        try {
+          const response = await fetch("/api/recent");
+          const data = await response.json();
+
+          if (data.success && data.data.length > 0) {
+            displayRecentWallets(data.data);
+          }
+        } catch (error) {
+          console.error("Error loading recent wallets:", error);
+        }
+      }
+
+      function displayRecentWallets(wallets) {
+        if (wallets.length === 0) {
+          recentWalletsDiv.innerHTML =
+            '<div class="empty-recent">No wallets analyzed yet. Be the first!</div>';
+          return;
+        }
+
+        let tableHTML = '<table class="recent-table"><thead><tr>';
+        tableHTML += "<th>Address</th>";
+        tableHTML += "<th>P1</th>";
+        tableHTML += "<th>P2</th>";
+        tableHTML += "<th>P3</th>";
+        tableHTML += "<th>P4</th>";
+        tableHTML += "<th>Score</th>";
+        tableHTML += "</tr></thead><tbody>";
+
+        wallets.forEach((wallet) => {
+          const explorerUrl = `https://explorer.bitquery.io/ethereum/address/${wallet.address}`;
+          const shortAddress =
+            wallet.address.substring(0, 6) +
+            "..." +
+            wallet.address.substring(38);
+
+          tableHTML += "<tr>";
+          tableHTML += `<td><a href="${explorerUrl}" target="_blank" class="address-link" title="${wallet.address}">${shortAddress}</a></td>`;
+          tableHTML += `<td class="score-cell">${wallet.p1.toFixed(2)}</td>`;
+          tableHTML += `<td class="score-cell">${wallet.p2.toFixed(2)}</td>`;
+          tableHTML += `<td class="score-cell">${wallet.p3.toFixed(2)}</td>`;
+          tableHTML += `<td class="score-cell">${wallet.p4.toFixed(2)}</td>`;
+          tableHTML += `<td class="score-cell">${wallet.final_score}</td>`;
+          tableHTML += "</tr>";
+        });
+
+        tableHTML += "</tbody></table>";
+        recentWalletsDiv.innerHTML = tableHTML;
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const address = addressInput.value.trim();
+
+        // Validate address
+        if (!address.startsWith("0x") || address.length !== 42) {
+          showError(
+            "Please enter a valid Ethereum address (0x followed by 40 hexadecimal characters)"
+          );
+          return;
+        }
+
+        // Reset UI
+        errorMessage.style.display = "none";
+        results.style.display = "none";
+        loading.style.display = "block";
+        searchBtn.disabled = true;
+
+        try {
+          const response = await fetch("/api/calculate", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ address: address }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "An error occurred");
+          }
+
+          displayResults(data.data);
+
+          // Refresh recent wallets after successful calculation
+          loadRecentWallets();
+        } catch (error) {
+          showError(
+            error.message || "Failed to analyze address. Please try again."
+          );
+        } finally {
+          loading.style.display = "none";
+          searchBtn.disabled = false;
+        }
+      });
+
+      function showError(message) {
+        errorMessage.textContent = message;
+        errorMessage.style.display = "block";
+      }
+
+      function displayResults(data) {
+        document.getElementById("finalScore").textContent =
+          data.final_score_rounded;
+        document.getElementById("addressDisplay").textContent = data.address;
+
+        const pillarsDiv = document.getElementById("pillars");
+        pillarsDiv.innerHTML = `
+                <div class="pillar-card">
+                    <div class="pillar-title">P1: Transaction Count</div>
+                    <div class="pillar-score">${data.p1.score.toFixed(2)}</div>
+                    <div class="pillar-detail">${
+                      data.p1.tx_count
+                    } transactions</div>
+                </div>
+                <div class="pillar-card">
+                    <div class="pillar-title">P2: Transaction Types</div>
+                    <div class="pillar-score">${data.p2.score.toFixed(2)}</div>
+                    <div class="pillar-detail">${
+                      data.p2.unique_types
+                    } unique types</div>
+                </div>
+                <div class="pillar-card">
+                    <div class="pillar-title">P3: Protocols Used</div>
+                    <div class="pillar-score">${data.p3.score.toFixed(2)}</div>
+                    <div class="pillar-detail">${
+                      data.p3.unique_protocols
+                    } protocols</div>
+                </div>
+                <div class="pillar-card">
+                    <div class="pillar-title">P4: Assets Held</div>
+                    <div class="pillar-score">${data.p4.score.toFixed(2)}</div>
+                    <div class="pillar-detail">${
+                      data.p4.unique_assets
+                    } assets</div>
+                </div>
+            `;
+
+        results.style.display = "block";
+        results.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    </script>
+  </body>
+</html>
