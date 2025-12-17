@@ -609,8 +609,8 @@ def calculate_defi_score(address: str, api_key: str, verbose: bool = True) -> Di
     try:
         if results.get("p1") is not None:
             tx_count, p1_time = results["p1"]
-            p1_score = calculate_p1_score(tx_count)
-            if verbose:
+        p1_score = calculate_p1_score(tx_count)
+        if verbose:
                 print(f"  ✓ P1 calculated: {tx_count} transactions → {p1_score:.2f} points (took {p1_time:.2f}s)")
         else:
             tx_count = 0
@@ -650,7 +650,7 @@ def calculate_defi_score(address: str, api_key: str, verbose: bool = True) -> Di
                     activity_types.add("ERC-20 Trading")
                 if dex_count_nonfungible > 0:
                     activity_types.add("NFT Trading")
-                    
+        
             except (ValueError, TypeError) as e:
                 if verbose:
                     print(f"  ⚠ Error unpacking DEX/NFT results: {str(e)}")
@@ -681,8 +681,8 @@ def calculate_defi_score(address: str, api_key: str, verbose: bool = True) -> Di
     try:
         if results.get("p4") is not None:
             unique_assets, p4_time = results["p4"]
-            p4_score = calculate_p4_score(unique_assets)
-            if verbose:
+        p4_score = calculate_p4_score(unique_assets)
+        if verbose:
                 print(f"  ✓ P4 calculated: {unique_assets} assets → {p4_score:.2f} points (took {p4_time:.2f}s)")
         else:
             unique_assets = 0

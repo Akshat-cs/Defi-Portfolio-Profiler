@@ -380,11 +380,16 @@
       .recent-table th {
         text-align: left;
         padding: 12px 16px;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 600;
         color: #666;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+      }
+
+      .recent-table th.final-score-header {
+        font-size: 14px;
+        color: #1a1a1a;
       }
 
       .recent-table td {
@@ -947,9 +952,6 @@
         return `${cleanRoot}/${cleanPath}`;
       }
 
-      // Debug: Log APPLICATION_ROOT on page load
-      console.log("APPLICATION_ROOT:", APPLICATION_ROOT);
-
       const form = document.getElementById("searchForm");
       const addressInput = document.getElementById("addressInput");
       const searchBtn = document.getElementById("searchBtn");
@@ -1073,7 +1075,6 @@
       async function loadRecentWallets() {
         try {
           const url = getApiUrl("api/recent");
-          console.log("Loading recent wallets from:", url);
           const response = await fetch(url);
 
           if (!response.ok) {
@@ -1083,7 +1084,6 @@
           const contentType = response.headers.get("content-type");
           if (!contentType || !contentType.includes("application/json")) {
             const text = await response.text();
-            console.error("Expected JSON but got:", text.substring(0, 200));
             throw new Error("Server returned non-JSON response");
           }
 
@@ -1093,7 +1093,7 @@
             displayRecentWallets(data.data);
           }
         } catch (error) {
-          console.error("Error loading recent wallets:", error);
+          // Silently handle error loading recent wallets
         }
       }
 
@@ -1106,11 +1106,11 @@
 
         let tableHTML = '<table class="recent-table"><thead><tr>';
         tableHTML += "<th>Address</th>";
-        tableHTML += "<th>Transaction Count</th>";
-        tableHTML += "<th>Transaction Types</th>";
-        tableHTML += "<th>Protocols Used</th>";
-        tableHTML += "<th>Assets Held</th>";
-        tableHTML += "<th>Final Score</th>";
+        tableHTML += "<th>Transaction Count Score</th>";
+        tableHTML += "<th>Transaction Types Score</th>";
+        tableHTML += "<th>Protocols Used Score</th>";
+        tableHTML += "<th>Assets Held Score</th>";
+        tableHTML += '<th class="final-score-header">Final Score</th>';
         tableHTML += "</tr></thead><tbody>";
 
         wallets.forEach((wallet) => {
@@ -1162,7 +1162,6 @@
 
         try {
           const url = getApiUrl("api/calculate");
-          console.log("Calculating score via:", url);
           const response = await fetch(url, {
             method: "POST",
             headers: {
@@ -1173,14 +1172,12 @@
 
           if (!response.ok) {
             const errorText = await response.text();
-            console.error("API Error Response:", errorText.substring(0, 500));
             throw new Error(`HTTP error! status: ${response.status}`);
           }
 
           const contentType = response.headers.get("content-type");
           if (!contentType || !contentType.includes("application/json")) {
             const text = await response.text();
-            console.error("Expected JSON but got:", text.substring(0, 200));
             throw new Error(
               "Server returned non-JSON response. Check if the API endpoint is correct."
             );
