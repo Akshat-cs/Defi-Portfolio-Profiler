@@ -5,37 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Analyze Ethereum wallet DeFi activity and calculate your DeFi Strategy Score. Track transaction count, protocol interactions, asset holdings, and more using real-time blockchain data from Bitquery."
+      content="Ethereum Wallet DeFi Score - Calculate your DeFi Strategy Score for any Ethereum wallet. Analyze transaction count, protocol interactions, asset holdings, and DeFi engagement using real-time blockchain data from Bitquery."
     />
     <meta
       name="keywords"
-      content="DeFi score, Ethereum wallet analysis, DeFi portfolio tracker, blockchain analytics, wallet scoring, DeFi strategy, on-chain analysis"
+      content="Ethereum wallet DeFi score, DeFi strategy score calculator, Ethereum wallet analyzer, DeFi score, wallet DeFi analysis, blockchain analytics, DeFi engagement score, on-chain analysis"
     />
-    <meta name="author" content="DeFi Address Profiler" />
+    <meta name="author" content="Ethereum Wallet DeFi Score" />
     <title>
-      DeFi Address Profiler - Analyze Your Ethereum Wallet's DeFi Activity
+      Ethereum Wallet DeFi Score - Calculate Your DeFi Strategy Score
     </title>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta
       property="og:title"
-      content="DeFi Address Profiler - Analyze Your Ethereum Wallet's DeFi Activity"
+      content="Ethereum Wallet DeFi Score - Calculate Your DeFi Strategy Score"
     />
     <meta
       property="og:description"
-      content="Calculate your DeFi Strategy Score by analyzing transaction patterns, protocol interactions, and asset holdings on Ethereum."
+      content="Calculate your DeFi Strategy Score for any Ethereum wallet. Analyze transaction patterns, protocol interactions, and asset holdings using real-time blockchain data."
     />
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta
       property="twitter:title"
-      content="DeFi Address Profiler - Analyze Your Ethereum Wallet's DeFi Activity"
+      content="Ethereum Wallet DeFi Score - Calculate Your DeFi Strategy Score"
     />
     <meta
       property="twitter:description"
-      content="Calculate your DeFi Strategy Score by analyzing transaction patterns, protocol interactions, and asset holdings on Ethereum."
+      content="Calculate your DeFi Strategy Score for any Ethereum wallet. Analyze transaction patterns, protocol interactions, and asset holdings using real-time blockchain data."
     />
 
     <style>
@@ -170,8 +170,9 @@
       }
 
       .score-label {
-        font-size: 18px;
-        color: #666;
+        font-size: 32px;
+        font-weight: 700;
+        color: #1a1a1a;
         margin-bottom: 8px;
       }
 
@@ -195,6 +196,40 @@
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .pillar-title-text {
+        flex: 1;
+      }
+
+      .get-api-btn {
+        font-size: 11px;
+        font-weight: 500;
+        padding: 4px 10px;
+        background: #0066ff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.2s;
+        text-transform: none;
+        letter-spacing: 0;
+      }
+
+      .get-api-btn:hover {
+        background: #0052cc;
+      }
+
+      .info-section .get-api-btn {
+        font-size: 12px;
+        padding: 5px 12px;
+        margin-left: 8px;
       }
 
       .pillar-score {
@@ -386,11 +421,197 @@
         color: #1a1a1a;
       }
 
+      .final-score-cell {
+        font-weight: 700;
+        font-size: 18px;
+        color: #1a1a1a;
+      }
+
       .empty-recent {
         text-align: center;
         padding: 40px;
         color: #999;
         font-style: italic;
+      }
+
+      .checks-counter {
+        text-align: center;
+        font-size: 14px;
+        color: #666;
+        margin-top: 8px;
+        font-weight: 500;
+      }
+
+      .checks-counter.zero {
+        color: #c33;
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      .modal {
+        background: white;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+        position: relative;
+      }
+
+      @keyframes slideUp {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: #f0f0f0;
+        border: none;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        color: #666;
+        transition: all 0.2s;
+        z-index: 10;
+      }
+
+      .modal-close:hover {
+        background: #e0e0e0;
+        color: #1a1a1a;
+      }
+
+      .modal-content {
+        padding: 40px;
+      }
+
+      .modal-icon {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        font-size: 32px;
+      }
+
+      .modal-title {
+        font-size: 28px;
+        font-weight: 700;
+        color: #1a1a1a;
+        text-align: center;
+        margin-bottom: 12px;
+      }
+
+      .modal-description {
+        font-size: 16px;
+        color: #666;
+        text-align: center;
+        line-height: 1.6;
+        margin-bottom: 32px;
+      }
+
+      .modal-features {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 32px;
+      }
+
+      .modal-features-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 16px;
+      }
+
+      .modal-features-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .modal-features-list li {
+        padding: 8px 0;
+        color: #666;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+      }
+
+      .modal-features-list li:before {
+        content: "✓";
+        color: #0066ff;
+        font-weight: bold;
+        margin-right: 12px;
+        font-size: 18px;
+      }
+
+      .modal-button {
+        width: 100%;
+        padding: 16px 32px;
+        font-size: 16px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+      }
+
+      .modal-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 102, 255, 0.3);
+      }
+
+      .modal-button:active {
+        transform: translateY(0);
       }
 
       @media (max-width: 768px) {
@@ -415,18 +636,19 @@
   <body>
     <header>
       <div class="container">
-        <h1>DeFi Address Profiler</h1>
+        <h1>Ethereum Wallet DeFi Score</h1>
       </div>
     </header>
 
     <main>
       <section class="hero">
         <div class="container">
-          <h2>Analyze Your Ethereum Wallet's DeFi Activity</h2>
+          <h2>Analyze Ethereum Wallet DeFi Activity</h2>
           <p>
-            Calculate your DeFi Strategy Score by analyzing transaction
-            patterns, protocol interactions, and asset holdings. Get insights
-            into your wallet's engagement with decentralized finance protocols.
+            Calculate the DeFi Strategy Score for any Ethereum address by
+            analyzing transaction patterns, protocol interactions, and asset
+            holdings. Get insights into wallet engagement with decentralized
+            finance protocols.
           </p>
 
           <div class="search-box">
@@ -444,6 +666,9 @@
               </button>
             </form>
             <div class="error-message" id="errorMessage"></div>
+            <div class="checks-counter" id="checksCounter">
+              3/3 checks available
+            </div>
 
             <div class="loading" id="loading">
               <div class="spinner"></div>
@@ -465,7 +690,7 @@
 
         <div class="results" id="results">
           <div class="score-header">
-            <div class="score-label">DeFi Strategy Score</div>
+            <div class="score-label">Final Score</div>
             <div class="final-score" id="finalScore">-</div>
             <div style="color: #666; font-size: 14px" id="addressDisplay"></div>
           </div>
@@ -474,38 +699,84 @@
         </div>
 
         <div class="info-section">
-          <h3>Understanding Your DeFi Strategy Score</h3>
+          <h3>Understanding the DeFi Strategy Score</h3>
           <p>
-            The DeFi Strategy Score measures your wallet's strategic engagement
-            and sophistication within the DeFi ecosystem, independent of total
+            The DeFi Strategy Score measures a wallet's strategic engagement and
+            sophistication within the DeFi ecosystem, independent of total
             capital deployed. The score ranges from 25 to 100, calculated using
-            four key pillars:
+            four key components:
           </p>
 
           <ul style="margin-top: 24px">
             <li>
-              <strong>P1: Transaction Count</strong>
-              Measures your wallet's overall activity level. Scores are based on
-              the total number of successful transactions in the past year, with
-              100+ transactions achieving the maximum score.
+              <strong>
+                Transaction Count Score
+                <a
+                  href="https://ide.bitquery.io/v1-query---transaction-count-for-an-address-last-3-yrs?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+                  target="_blank"
+                  class="get-api-btn"
+                  >Get API</a
+                >
+              </strong>
+              Measures the wallet's overall activity level. Scores are based on
+              the total number of successful transactions in the past 3 years,
+              with 100+ transactions achieving the maximum score.
             </li>
             <li>
-              <strong>P2: Transaction Types</strong>
-              Evaluates the diversity of your DeFi interactions. We track eight
-              activity types: DEX Swaps, Lending/Borrowing, Staking, Liquidity
-              Provision, NFT Trading, Governance, Bridging, and Yield Farming.
-              Engaging with 5+ unique types achieves the maximum score.
+              <strong>
+                Transaction Types Score
+                <a
+                  href="https://ide.bitquery.io/v1-query---Calls-to-Different-types-of-protocols-for-last-3-yrs?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+                  target="_blank"
+                  class="get-api-btn"
+                  >Get API</a
+                >
+                <a
+                  href="https://ide.bitquery.io/v2-query---dexswaps-and-nft-trading-activity--for-last-3-yrs?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+                  target="_blank"
+                  class="get-api-btn"
+                  style="margin-left: 4px"
+                  >DEX/NFT API</a
+                >
+              </strong>
+              Evaluates the diversity of DeFi interactions. We track activity
+              types: ERC-20 Trading, Lending/Borrowing, Staking, Liquidity
+              Provision, NFT Trading, Bridging, and Yield Farming. Engaging with
+              5+ unique types achieves the maximum score.
             </li>
             <li>
-              <strong>P3: Protocols Used</strong>
-              Assesses how widely you've interacted with the DeFi ecosystem. We
-              monitor interactions with major protocols including Uniswap, Aave,
-              Lido, Compound, and others. Using 8+ unique protocols achieves the
-              maximum score.
+              <strong>
+                Protocols Used Score
+                <a
+                  href="https://ide.bitquery.io/v1-query---Calls-to-Different-types-of-protocols-for-last-3-yrs?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+                  target="_blank"
+                  class="get-api-btn"
+                  >Get API</a
+                >
+              </strong>
+              Assesses how widely the wallet has interacted with the DeFi
+              ecosystem. We monitor interactions with major protocols including
+              Uniswap, Aave, Lido, Compound, and others. Using 8+ unique
+              protocols achieves the maximum score.
             </li>
             <li>
-              <strong>P4: Assets Held</strong>
-              Measures the diversity of your portfolio. We count ERC-20 tokens
+              <strong>
+                Assets Held Score
+                <a
+                  href="https://ide.bitquery.io/Token-balances-of-an-address-above-10_1?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+                  target="_blank"
+                  class="get-api-btn"
+                  >ERC-20 API</a
+                >
+                <a
+                  href="https://ide.bitquery.io/NFT-balances-of-an-address_1?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+                  target="_blank"
+                  class="get-api-btn"
+                  style="margin-left: 4px"
+                  >NFT API</a
+                >
+              </strong>
+              Measures the diversity of the portfolio. We count ERC-20 tokens
               with balances exceeding $10 USD and individual NFT holdings.
               Holding 15+ unique assets achieves the maximum score.
             </li>
@@ -517,7 +788,7 @@
               real-time blockchain data from Bitquery, a leading blockchain data
               analytics platform. We query Ethereum mainnet transactions, smart
               contract interactions, token balances, and NFT holdings to
-              calculate your score.
+              calculate the score.
             </p>
           </div>
         </div>
@@ -531,10 +802,10 @@
             </div>
             <div class="faq-answer">
               The score uses a base of 25 points plus a weighted average of four
-              pillar scores (P1-P4). Each pillar is scored from 0-100 points
-              based on specific metrics. The average pillar score is multiplied
-              by 0.75 and added to the base score of 25, resulting in a final
-              score between 25 and 100.
+              component scores. Each component is scored from 0-100 points based
+              on specific metrics. The average component score is multiplied by
+              0.75 and added to the base score of 25, resulting in a final score
+              between 25 and 100.
             </div>
           </div>
 
@@ -543,7 +814,7 @@
               What time period does the analysis cover?
             </div>
             <div class="faq-answer">
-              The analysis examines your wallet's activity over the past 1 year.
+              The analysis examines the wallet's activity over the past 1 year.
               This includes all successful transactions, protocol interactions,
               and current asset holdings as of the analysis date.
             </div>
@@ -574,13 +845,13 @@
 
           <div class="faq-item">
             <div class="faq-question">
-              Is my wallet address stored or tracked?
+              Are wallet addresses stored or tracked?
             </div>
             <div class="faq-answer">
               No. We do not store, track, or log any wallet addresses. All
               analysis is performed in real-time using publicly available
-              blockchain data. Your privacy is maintained as we only query
-              on-chain information that is already publicly accessible.
+              blockchain data. Privacy is maintained as we only query on-chain
+              information that is already publicly accessible.
             </div>
           </div>
 
@@ -598,12 +869,14 @@
           </div>
 
           <div class="faq-item">
-            <div class="faq-question">How often should I check my score?</div>
+            <div class="faq-question">
+              How often can I check a wallet's score?
+            </div>
             <div class="faq-answer">
-              Your score updates in real-time with each analysis. As you engage
-              with more DeFi protocols, diversify your transaction types, and
-              expand your asset holdings, your score will reflect these changes.
-              There's no limit to how often you can analyze your wallet.
+              The score updates in real-time with each analysis. As a wallet
+              engages with more DeFi protocols, diversifies transaction types,
+              and expands asset holdings, the score will reflect these changes.
+              You can analyze any wallet address to see its current score.
             </div>
           </div>
         </div>
@@ -612,14 +885,71 @@
 
     <footer>
       <div class="container">
-        <p>DeFi Address Profiler - Powered by Bitquery Blockchain Data</p>
+        <p>Ethereum Wallet DeFi Score - Powered by Bitquery Blockchain Data</p>
         <p style="margin-top: 8px; font-size: 12px">
           Analyzing Ethereum wallet activity and DeFi engagement patterns
         </p>
       </div>
     </footer>
 
+    <!-- Bitquery Signup Modal -->
+    <div class="modal-overlay" id="signupModal">
+      <div class="modal">
+        <button class="modal-close" id="modalClose" aria-label="Close modal">
+          ×
+        </button>
+        <div class="modal-content">
+          <div class="modal-icon">🚀</div>
+          <h2 class="modal-title">Unlock Unlimited Analysis</h2>
+          <p class="modal-description">
+            You've used all 3 free checks! Sign up for Bitquery IDE to access
+            powerful blockchain data APIs across 20+ chains and continue
+            analyzing wallets.
+          </p>
+          <div class="modal-features">
+            <div class="modal-features-title">What you'll get:</div>
+            <ul class="modal-features-list">
+              <li>Access to 20+ blockchain networks</li>
+              <li>Real-time blockchain data APIs</li>
+              <li>Advanced query capabilities</li>
+              <li>Comprehensive analytics tools</li>
+            </ul>
+          </div>
+          <a
+            href="https://account.bitquery.io/auth/signup?redirect_to=https%3A%2F%2Fide.bitquery.io%2F&utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool"
+            target="_blank"
+            class="modal-button"
+            id="signupButton"
+          >
+            Sign Up on Bitquery IDE
+          </a>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // Application root for subpath deployment
+      const APPLICATION_ROOT = "{{ application_root|safe }}" || "";
+
+      // Helper function to build API URLs
+      function getApiUrl(path) {
+        // Remove leading slash from path if present
+        const cleanPath = path.startsWith("/") ? path.slice(1) : path;
+        // Handle APPLICATION_ROOT - remove trailing slash if present
+        let cleanRoot = APPLICATION_ROOT;
+        if (cleanRoot && cleanRoot.endsWith("/")) {
+          cleanRoot = cleanRoot.slice(0, -1);
+        }
+        // Build URL - if APPLICATION_ROOT is empty or just "/", use absolute path
+        if (!cleanRoot || cleanRoot === "/") {
+          return `/${cleanPath}`;
+        }
+        return `${cleanRoot}/${cleanPath}`;
+      }
+
+      // Debug: Log APPLICATION_ROOT on page load
+      console.log("APPLICATION_ROOT:", APPLICATION_ROOT);
+
       const form = document.getElementById("searchForm");
       const addressInput = document.getElementById("addressInput");
       const searchBtn = document.getElementById("searchBtn");
@@ -627,13 +957,136 @@
       const loading = document.getElementById("loading");
       const results = document.getElementById("results");
       const recentWalletsDiv = document.getElementById("recentWallets");
+      const checksCounter = document.getElementById("checksCounter");
+      const signupModal = document.getElementById("signupModal");
+      const modalClose = document.getElementById("modalClose");
+
+      // Check limit management
+      const MAX_CHECKS = 3;
+      const STORAGE_KEY = "defi_checks_remaining";
+      const UNLIMITED_KEY = "defi_checks_unlimited";
+
+      // Check if user has unlimited checks
+      function hasUnlimitedChecks() {
+        return localStorage.getItem(UNLIMITED_KEY) === "true";
+      }
+
+      // Grant unlimited checks
+      function grantUnlimitedChecks() {
+        localStorage.setItem(UNLIMITED_KEY, "true");
+        updateChecksDisplay("unlimited");
+      }
+
+      // Initialize checks on page load
+      function initializeChecks() {
+        if (hasUnlimitedChecks()) {
+          updateChecksDisplay("unlimited");
+          return;
+        }
+
+        const remaining = localStorage.getItem(STORAGE_KEY);
+        if (remaining === null) {
+          localStorage.setItem(STORAGE_KEY, MAX_CHECKS.toString());
+          updateChecksDisplay(MAX_CHECKS);
+        } else {
+          const count = parseInt(remaining, 10);
+          updateChecksDisplay(count);
+        }
+      }
+
+      function getRemainingChecks() {
+        if (hasUnlimitedChecks()) {
+          return Infinity; // Return Infinity to indicate unlimited
+        }
+        const remaining = localStorage.getItem(STORAGE_KEY);
+        return remaining !== null ? parseInt(remaining, 10) : MAX_CHECKS;
+      }
+
+      function decrementChecks() {
+        // Don't decrement if unlimited
+        if (hasUnlimitedChecks()) {
+          return;
+        }
+
+        const current = getRemainingChecks();
+        if (current > 0 && current !== Infinity) {
+          const newCount = current - 1;
+          localStorage.setItem(STORAGE_KEY, newCount.toString());
+          updateChecksDisplay(newCount);
+        }
+      }
+
+      function updateChecksDisplay(count) {
+        if (count === "unlimited" || count === Infinity) {
+          // Hide counter when unlimited
+          checksCounter.style.display = "none";
+        } else {
+          checksCounter.style.display = "block";
+          if (count <= 0) {
+            checksCounter.textContent = "0/3 checks available";
+            checksCounter.classList.add("zero");
+          } else {
+            checksCounter.textContent = `${count}/3 checks available`;
+            checksCounter.classList.remove("zero");
+          }
+        }
+      }
+
+      function showSignupModal() {
+        signupModal.classList.add("show");
+        document.body.style.overflow = "hidden";
+      }
+
+      function hideSignupModal() {
+        signupModal.classList.remove("show");
+        document.body.style.overflow = "";
+      }
+
+      // Modal event listeners
+      modalClose.addEventListener("click", hideSignupModal);
+      signupModal.addEventListener("click", (e) => {
+        if (e.target === signupModal) {
+          hideSignupModal();
+        }
+      });
+
+      // Close modal on Escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && signupModal.classList.contains("show")) {
+          hideSignupModal();
+        }
+      });
+
+      // Signup button click handler - grant unlimited checks
+      const signupButton = document.getElementById("signupButton");
+      signupButton.addEventListener("click", () => {
+        grantUnlimitedChecks();
+        hideSignupModal();
+      });
+
+      // Initialize checks counter
+      initializeChecks();
 
       // Load recent wallets on page load
       loadRecentWallets();
 
       async function loadRecentWallets() {
         try {
-          const response = await fetch("/api/recent");
+          const url = getApiUrl("api/recent");
+          console.log("Loading recent wallets from:", url);
+          const response = await fetch(url);
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error("Expected JSON but got:", text.substring(0, 200));
+            throw new Error("Server returned non-JSON response");
+          }
+
           const data = await response.json();
 
           if (data.success && data.data.length > 0) {
@@ -653,15 +1106,15 @@
 
         let tableHTML = '<table class="recent-table"><thead><tr>';
         tableHTML += "<th>Address</th>";
-        tableHTML += "<th>P1</th>";
-        tableHTML += "<th>P2</th>";
-        tableHTML += "<th>P3</th>";
-        tableHTML += "<th>P4</th>";
-        tableHTML += "<th>Score</th>";
+        tableHTML += "<th>Transaction Count</th>";
+        tableHTML += "<th>Transaction Types</th>";
+        tableHTML += "<th>Protocols Used</th>";
+        tableHTML += "<th>Assets Held</th>";
+        tableHTML += "<th>Final Score</th>";
         tableHTML += "</tr></thead><tbody>";
 
         wallets.forEach((wallet) => {
-          const explorerUrl = `https://explorer.bitquery.io/ethereum/address/${wallet.address}`;
+          const explorerUrl = `https://explorer.bitquery.io/ethereum/address/${wallet.address}?utm_source=ethereum-wallet-defi-score&utm_medium=web&utm_campaign=defi-score-tool`;
           const shortAddress =
             wallet.address.substring(0, 6) +
             "..." +
@@ -673,7 +1126,7 @@
           tableHTML += `<td class="score-cell">${wallet.p2.toFixed(2)}</td>`;
           tableHTML += `<td class="score-cell">${wallet.p3.toFixed(2)}</td>`;
           tableHTML += `<td class="score-cell">${wallet.p4.toFixed(2)}</td>`;
-          tableHTML += `<td class="score-cell">${wallet.final_score}</td>`;
+          tableHTML += `<td class="final-score-cell">${wallet.final_score}</td>`;
           tableHTML += "</tr>";
         });
 
@@ -685,6 +1138,13 @@
         e.preventDefault();
 
         const address = addressInput.value.trim();
+
+        // Check if user has remaining checks (show modal every time if no checks and not unlimited)
+        const remaining = getRemainingChecks();
+        if (remaining <= 0 && !hasUnlimitedChecks()) {
+          showSignupModal();
+          return;
+        }
 
         // Validate address
         if (!address.startsWith("0x") || address.length !== 42) {
@@ -701,7 +1161,9 @@
         searchBtn.disabled = true;
 
         try {
-          const response = await fetch("/api/calculate", {
+          const url = getApiUrl("api/calculate");
+          console.log("Calculating score via:", url);
+          const response = await fetch(url, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -709,11 +1171,29 @@
             body: JSON.stringify({ address: address }),
           });
 
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("API Error Response:", errorText.substring(0, 500));
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const contentType = response.headers.get("content-type");
+          if (!contentType || !contentType.includes("application/json")) {
+            const text = await response.text();
+            console.error("Expected JSON but got:", text.substring(0, 200));
+            throw new Error(
+              "Server returned non-JSON response. Check if the API endpoint is correct."
+            );
+          }
+
           const data = await response.json();
 
           if (!response.ok) {
             throw new Error(data.error || "An error occurred");
           }
+
+          // Decrement checks only on successful analysis
+          decrementChecks();
 
           displayResults(data.data);
 
@@ -742,28 +1222,36 @@
         const pillarsDiv = document.getElementById("pillars");
         pillarsDiv.innerHTML = `
                 <div class="pillar-card">
-                    <div class="pillar-title">P1: Transaction Count</div>
+                    <div class="pillar-title">
+                      <span class="pillar-title-text">Transaction Count Score</span>
+                    </div>
                     <div class="pillar-score">${data.p1.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
                       data.p1.tx_count
                     } transactions</div>
                 </div>
                 <div class="pillar-card">
-                    <div class="pillar-title">P2: Transaction Types</div>
+                    <div class="pillar-title">
+                      <span class="pillar-title-text">Transaction Types Score</span>
+                    </div>
                     <div class="pillar-score">${data.p2.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
                       data.p2.unique_types
                     } unique types</div>
                 </div>
                 <div class="pillar-card">
-                    <div class="pillar-title">P3: Protocols Used</div>
+                    <div class="pillar-title">
+                      <span class="pillar-title-text">Protocols Used Score</span>
+                    </div>
                     <div class="pillar-score">${data.p3.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
                       data.p3.unique_protocols
                     } protocols</div>
                 </div>
                 <div class="pillar-card">
-                    <div class="pillar-title">P4: Assets Held</div>
+                    <div class="pillar-title">
+                      <span class="pillar-title-text">Assets Held Score</span>
+                    </div>
                     <div class="pillar-score">${data.p4.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
                       data.p4.unique_assets

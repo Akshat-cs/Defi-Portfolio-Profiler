@@ -116,3 +116,6 @@ dist/
 *.swp
 *.swo
 
+# Application data files
+recent_wallets.json
+

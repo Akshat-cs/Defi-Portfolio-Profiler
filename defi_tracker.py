@@ -8,13 +8,17 @@ import sys
 import argparse
 import requests
 from typing import Dict, List, Optional, Set, Tuple
+from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Bitquery endpoint
-BITQUERY_ENDPOINT = "https://streaming.bitquery.io/graphql"
+# Bitquery endpoints
+BITQUERY_ENDPOINT_V1 = "https://graphql.bitquery.io"  # For Ethereum v1 queries
+BITQUERY_ENDPOINT_V2 = "https://streaming.bitquery.io/graphql"  # For EVM v2 queries
 
 # Protocol addresses organized by category
 PROTOCOL_ADDRESSES = {
@@ -62,19 +66,11 @@ PROTOCOL_ADDRESSES = {
         "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
     ],
     "staking": [
-        # Ethereum 2.0
-        "0x00000000219ab540356cBB839Cbe05303d7705Fa",
         # Lido
         "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
         "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
         # RocketPool
-        "0xDD3f50F8A6CafbE9b31a427582963f465E745AF8",
-        # Swell
-        "0xFAe103DC9cf190eD75350761e95403b7b8aFa6c0",
-        # Coinbase cbETH
-        "0xBe9895146f7AF43049ca1c1AE358B0541Ea49704",
-        # Frax Ether
-        "0xac3E018457B222d93114458476f3E3416Abbe38F",
+        "0xDD3f50F8A6CafbE9b31a427582963f465E745AF8"
     ],
     "liquidity": [
         # Uniswap v3
@@ -95,7 +91,7 @@ PROTOCOL_ADDRESSES = {
         "0xa258C4606Ca8206D8aA700cE2143D7db854D168c",
         # Convex Finance
         "0xF403C135812408BFbE8713b5A23a04b3D48AAE31",
-    ],
+    ]
 }
 
 # Get all protocol addresses for P3
@@ -104,27 +100,36 @@ for addresses in PROTOCOL_ADDRESSES.values():
     ALL_PROTOCOL_ADDRESSES.extend(addresses)
 
 
+def get_time_3_years_ago() -> str:
+    """Get ISO8601 timestamp for 3 years ago"""
+    three_years_ago = datetime.utcnow() - timedelta(days=3*365)
+    return three_years_ago.strftime("%Y-%m-%dT00:00:00Z")
+
+
 class BitqueryClient:
     """Client for interacting with Bitquery GraphQL API"""
     
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.endpoint = BITQUERY_ENDPOINT
         self.headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
         }
     
-    def execute_query(self, query: str, variables: Optional[Dict] = None) -> Dict:
-        """Execute a GraphQL query"""
+    def execute_query(self, query: str, variables: Optional[Dict] = None, endpoint: Optional[str] = None) -> Tuple[Dict, float]:
+        """Execute a GraphQL query and return result with timing"""
         payload = {
             "query": query,
             "variables": variables or {}
         }
         
+        # Use v2 endpoint by default, or specified endpoint
+        endpoint = endpoint or BITQUERY_ENDPOINT_V2
+        
+        start_time = time.time()
         try:
             response = requests.post(
-                self.endpoint,
+                endpoint,
                 json=payload,
                 headers=self.headers,
                 timeout=200
@@ -132,12 +137,20 @@ class BitqueryClient:
             response.raise_for_status()
             data = response.json()
             
-            if "errors" in data:
-                raise Exception(f"GraphQL errors: {data['errors']}")
+            elapsed_time = time.time() - start_time
             
-            return data.get("data", {})
+            if "errors" in data:
+                error_msg = str(data['errors'])
+                raise Exception(f"GraphQL errors: {error_msg}")
+            
+            return data.get("data", {}), elapsed_time
         except requests.exceptions.RequestException as e:
+            elapsed_time = time.time() - start_time
             raise Exception(f"API request failed: {str(e)}")
+        except Exception as e:
+            elapsed_time = time.time() - start_time
+            # Re-raise with proper error message
+            raise Exception(f"Query execution failed: {str(e)}")
 
 
 def calculate_p1_score(tx_count: int) -> float:
@@ -184,42 +197,16 @@ def calculate_p4_score(unique_assets: int) -> float:
     return min(100.0, ((unique_assets - 1) / (15 - 1)) * 100.0)
 
 
-def get_p1_transaction_count(client: BitqueryClient, address: str) -> int:
-    """Get transaction count for P1"""
+def get_p1_transaction_count(client: BitqueryClient, address: str, time_3yr_ago: str) -> Tuple[int, float]:
+    """Get transaction count for P1 using v1 API"""
     query = """
-    query MyQuery($address: String) {
-      EVM(network: eth, dataset: combined) {
-        Transactions(
-          where: {Transaction: {From: {is: $address}}, Block: {Time: {since_relative: {years_ago: 1}}}, TransactionStatus: {Success: true}}
-        ){
-          count
-        }
-      }
-    }
-    """
-    
-    variables = {"address": address}
-    data = client.execute_query(query, variables)
-    
-    try:
-        count = data.get("EVM", {}).get("Transactions", [{}])[0].get("count", 0)
-        return int(count) if count else 0
-    except (KeyError, IndexError, ValueError):
-        return 0
-
-
-def get_p2_p3_data(client: BitqueryClient, address: str) -> Tuple[Set[str], Set[str]]:
-    """Get transaction types and protocols for P2 and P3"""
-    query = """
-    query MyQuery($protocols: [String!], $address: String) {
-      EVM(network: eth, dataset: combined) {
-        Calls(
-          where: {Block:{Time:{since_relative:{years_ago:1}}} Call: {To: {in: $protocols }}, TransactionStatus: {Success: true}, Transaction: {From: {is:$address}}}
+    query MyQuery($address: String, $time3yr_ago: ISO8601DateTime) {
+      ethereum {
+        transactions(
+          txSender: {is: $address}
+          time: {since: $time3yr_ago}
         ) {
-          Call {
-            To
-          }
-          count(distinct:Transaction_Hash)
+          count
         }
       }
     }
@@ -227,80 +214,214 @@ def get_p2_p3_data(client: BitqueryClient, address: str) -> Tuple[Set[str], Set[
     
     variables = {
         "address": address,
-        "protocols": ALL_PROTOCOL_ADDRESSES
+        "time3yr_ago": time_3yr_ago
     }
     
-    data = client.execute_query(query, variables)
+    print(f"\n  [DEBUG] P1 Transaction Count Query (v1 API) for address: {address}")
+    print(f"  [DEBUG] Time filter: {time_3yr_ago}")
+    
+    try:
+        data, elapsed_time = client.execute_query(query, variables, endpoint=BITQUERY_ENDPOINT_V1)
+    except Exception as e:
+        print(f"  [DEBUG] Error executing P1 query: {str(e)}")
+        return 0, 0.0
+    
+    # Debug: Print raw response
+    import json
+    print(f"  [DEBUG] P1 Raw API Response:")
+    print(f"  {json.dumps(data, indent=2)}")
+    print(f"  [DEBUG] P1 Query took: {elapsed_time:.2f}s")
+    
+    try:
+        count = data.get("ethereum", {}).get("transactions", [{}])[0].get("count", 0)
+        tx_count = int(count) if count else 0
+        print(f"  [DEBUG] Transaction count: {tx_count}")
+        return tx_count, elapsed_time
+    except (KeyError, IndexError, ValueError) as e:
+        print(f"  [DEBUG] Error parsing P1 data: {e}")
+        return 0, elapsed_time
+
+
+def get_p2_p3_data(client: BitqueryClient, address: str, time_3yr_ago: str) -> Tuple[Set[str], Set[str], float]:
+    """Get transaction types and protocols for P2 and P3 using v1 API"""
+    query = """
+    query MyQuery($time3yr_ago: ISO8601DateTime, $protocols: [String!], $address: String) {
+      ethereum(network: ethereum) {
+        smartContractCalls(
+          txFrom: {is: $address}
+          smartContractAddress: {in: $protocols}
+          time: {since: $time3yr_ago}
+        ) {
+          smartContract {
+            address {
+              address
+            }
+          }
+          txc: count
+        }
+      }
+    }
+    """
+    
+    variables = {
+        "address": address,
+        "protocols": ALL_PROTOCOL_ADDRESSES,
+        "time3yr_ago": time_3yr_ago
+    }
+    
+    print(f"\n  [DEBUG] P2/P3 Query (v1 API) - Checking {len(ALL_PROTOCOL_ADDRESSES)} protocol addresses")
+    print(f"  [DEBUG] Time filter: {time_3yr_ago}")
+    
+    try:
+        data, elapsed_time = client.execute_query(query, variables, endpoint=BITQUERY_ENDPOINT_V1)
+    except Exception as e:
+        print(f"  [DEBUG] Error executing P2/P3 query: {str(e)}")
+        return set(), set(), 0.0
+    
+    # Debug: Print raw response
+    import json
+    print(f"  [DEBUG] P2/P3 Raw API Response:")
+    print(f"  {json.dumps(data, indent=2)}")
+    print(f"  [DEBUG] P2/P3 Query took: {elapsed_time:.2f}s")
     
     interacted_protocols = set()
     activity_types = set()
     
     try:
-        calls = data.get("EVM", {}).get("Calls", [])
+        calls = data.get("ethereum", {}).get("smartContractCalls", [])
+        print(f"  [DEBUG] Found {len(calls)} protocol interactions")
+        
         for call in calls:
-            protocol_address = call.get("Call", {}).get("To", "")
+            protocol_address = call.get("smartContract", {}).get("address", {}).get("address", "")
+            tx_count = call.get("txc", 0)
             if protocol_address:
                 # Normalize address to lowercase for comparison and storage
                 protocol_address_lower = protocol_address.lower()
                 interacted_protocols.add(protocol_address_lower)
                 
+                print(f"    → Protocol: {protocol_address_lower} ({tx_count} transactions)")
+                
                 # Determine activity type based on protocol (check lowercase)
                 if any(addr.lower() == protocol_address_lower for addr in PROTOCOL_ADDRESSES["lending"]):
                     activity_types.add("Lending")
+                    print(f"      ✓ Categorized as: Lending")
                 elif any(addr.lower() == protocol_address_lower for addr in PROTOCOL_ADDRESSES["staking"]):
                     activity_types.add("Staking")
+                    print(f"      ✓ Categorized as: Staking")
                 elif any(addr.lower() == protocol_address_lower for addr in PROTOCOL_ADDRESSES["liquidity"]):
                     activity_types.add("Liquidity")
+                    print(f"      ✓ Categorized as: Liquidity")
                 elif any(addr.lower() == protocol_address_lower for addr in PROTOCOL_ADDRESSES["bridging"]):
                     activity_types.add("Bridging")
+                    print(f"      ✓ Categorized as: Bridging")
                 elif any(addr.lower() == protocol_address_lower for addr in PROTOCOL_ADDRESSES["yield_farming"]):
                     activity_types.add("Yield Farming")
-    except (KeyError, TypeError):
-        pass
+                    print(f"      ✓ Categorized as: Yield Farming")
+                else:
+                    print(f"      ⚠ Not categorized (not in protocol list)")
+    except (KeyError, TypeError) as e:
+        print(f"  [DEBUG] Error parsing P2/P3 data: {e}")
     
-    return activity_types, interacted_protocols
+    print(f"  [DEBUG] Final P2 Activity Types: {list(activity_types)}")
+    print(f"  [DEBUG] Final P3 Protocols Count: {len(interacted_protocols)}")
+    print(f"  [DEBUG] P3 Protocol Addresses: {list(interacted_protocols)}")
+    
+    return activity_types, interacted_protocols, elapsed_time
 
 
-def get_dex_and_nft_activity(client: BitqueryClient, address: str) -> Tuple[bool, bool]:
-    """Get DEX swaps and NFT trading activity"""
+def get_dex_and_nft_activity(client: BitqueryClient, address: str) -> Tuple[int, int, Set[str], float]:
+    """Get DEX swaps and NFT trading activity using v2 API
+    Returns: (dex_count_fungible, dex_count_nonfungible, dex_protocols, elapsed_time)
+    """
     query = """
     query MyQuery($address: String) {
-      EVM(network: eth, dataset: combined) {
+      EVM(network: eth, aggregates: yes, dataset: combined) {
         DEXTrades(
-          where: {Block: {Time: {since_relative: {years_ago: 1}}}, Transaction: {From: {is: $address}}, TransactionStatus: {Success: true}}
+          where: {Block: {Time: {since_relative: {years_ago: 3}}}, Transaction: {From: {is: $address}}, TransactionStatus: {Success: true}}
         ) {
-          dex_count_fungible:count(distinct:Trade_Dex_ProtocolName if:{Trade:{Buy:{Currency:{Fungible:true}}}})
-          dex_count_nonfungible:count(distinct:Trade_Dex_ProtocolName if:{Trade:{Buy:{Currency:{Fungible:false}}}})
+          dex_count_fungible: count(
+            distinct: Trade_Dex_ProtocolName
+            if: {Trade: {Buy: {Currency: {Fungible: true}}}}
+          )
+          dex_count_nonfungible: count(
+            distinct: Trade_Dex_ProtocolName
+            if: {Trade: {Buy: {Currency: {Fungible: false}}}}
+          )
         }
       }
     }
     """
     
     variables = {"address": address}
-    data = client.execute_query(query, variables)
+    print(f"\n  [DEBUG] DEX/NFT Query (v2 API) for address: {address}")
     
-    has_dex = False
-    has_nft_trading = False
+    try:
+        data, elapsed_time = client.execute_query(query, variables, endpoint=BITQUERY_ENDPOINT_V2)
+    except Exception as e:
+        print(f"  [DEBUG] Error executing DEX/NFT query: {str(e)}")
+        return 0, 0, set(), 0.0
+    
+    # Debug: Print raw response
+    import json
+    print(f"  [DEBUG] DEX/NFT Raw API Response:")
+    print(f"  {json.dumps(data, indent=2)}")
+    print(f"  [DEBUG] DEX/NFT Query took: {elapsed_time:.2f}s")
+    
+    dex_count_fungible = 0
+    dex_count_nonfungible = 0
+    dex_protocols = set()
     
     try:
         trades = data.get("EVM", {}).get("DEXTrades", [{}])[0]
-        if trades.get("dex_count_fungible", 0) > 0:
-            has_dex = True
-        if trades.get("dex_count_nonfungible", 0) > 0:
-            has_nft_trading = True
-    except (KeyError, IndexError, TypeError):
-        pass
+        dex_count_fungible_str = trades.get("dex_count_fungible", "0")
+        dex_count_nonfungible_str = trades.get("dex_count_nonfungible", "0")
+        
+        # Convert strings to integers
+        try:
+            dex_count_fungible = int(dex_count_fungible_str) if dex_count_fungible_str else 0
+        except (ValueError, TypeError):
+            dex_count_fungible = 0
+            
+        try:
+            dex_count_nonfungible = int(dex_count_nonfungible_str) if dex_count_nonfungible_str else 0
+        except (ValueError, TypeError):
+            dex_count_nonfungible = 0
+        
+        # Use counts to add generic protocol identifiers for P3
+        # Each distinct DEX protocol counts as 1 protocol in P3
+        if dex_count_fungible > 0:
+            for i in range(dex_count_fungible):
+                dex_protocols.add(f"dex_erc20_{i+1}")
+        if dex_count_nonfungible > 0:
+            for i in range(dex_count_nonfungible):
+                dex_protocols.add(f"dex_nft_{i+1}")
+        
+        print(f"  [DEBUG] DEX Count (Fungible): {dex_count_fungible}")
+        print(f"  [DEBUG] NFT Count (Non-Fungible): {dex_count_nonfungible}")
+        print(f"  [DEBUG] DEX Protocols: {list(dex_protocols)}")
+        
+        if dex_count_fungible > 0:
+            print(f"  [DEBUG] ✓ DEX Swaps detected!")
+        else:
+            print(f"  [DEBUG] ✗ No DEX swaps found")
+            
+        if dex_count_nonfungible > 0:
+            print(f"  [DEBUG] ✓ NFT Trading detected!")
+        else:
+            print(f"  [DEBUG] ✗ No NFT trading found")
+    except (KeyError, IndexError, TypeError) as e:
+        print(f"  [DEBUG] Error parsing DEX/NFT data: {e}")
     
-    return has_dex, has_nft_trading
+    return dex_count_fungible, dex_count_nonfungible, dex_protocols, elapsed_time
 
 
-def get_governance_activity(client: BitqueryClient, address: str) -> bool:
-    """Check for governance activity"""
+def get_governance_activity(client: BitqueryClient, address: str) -> Tuple[bool, float]:
+    """Check for governance activity using v2 API"""
     query = """
     query MyQuery($address: String) {
       EVM(network: eth, dataset: combined) {
         Calls(
-          where: {Block: {Time: {since_relative: {years_ago: 1}}}, Call: {Signature: {Name: {includesCaseInsensitive: "vote"}}}, Transaction:{From:{is:$address}} ,TransactionStatus: {Success: true}}
+          where: {Block: {Time: {since_relative: {years_ago: 3}}}, Call: {Signature: {Name: {includesCaseInsensitive: "vote"}}}, Transaction:{From:{is:$address}}, TransactionStatus: {Success: true}}
         ) {
           count
         }
@@ -309,17 +430,36 @@ def get_governance_activity(client: BitqueryClient, address: str) -> bool:
     """
     
     variables = {"address": address}
-    data = client.execute_query(query, variables)
+    print(f"\n  [DEBUG] Governance Query (v2 API) for address: {address}")
+    
+    try:
+        data, elapsed_time = client.execute_query(query, variables, endpoint=BITQUERY_ENDPOINT_V2)
+    except Exception as e:
+        print(f"  [DEBUG] Error executing Governance query: {str(e)}")
+        return False, 0.0
+    
+    # Debug: Print raw response
+    import json
+    print(f"  [DEBUG] Governance Raw API Response:")
+    print(f"  {json.dumps(data, indent=2)}")
+    print(f"  [DEBUG] Governance Query took: {elapsed_time:.2f}s")
     
     try:
         count = data.get("EVM", {}).get("Calls", [{}])[0].get("count", 0)
-        return int(count) > 0 if count else False
-    except (KeyError, IndexError, TypeError):
-        return False
+        has_governance = int(count) > 0 if count else False
+        print(f"  [DEBUG] Governance calls count: {count}")
+        if has_governance:
+            print(f"  [DEBUG] ✓ Governance activity detected!")
+        else:
+            print(f"  [DEBUG] ✗ No governance activity found")
+        return has_governance, elapsed_time
+    except (KeyError, IndexError, TypeError) as e:
+        print(f"  [DEBUG] Error parsing governance data: {e}")
+        return False, elapsed_time
 
 
-def get_p4_assets(client: BitqueryClient, address: str) -> int:
-    """Get unique assets count for P4 (ERC-20 > $10 + NFTs)"""
+def get_p4_assets(client: BitqueryClient, address: str) -> Tuple[int, float]:
+    """Get unique assets count for P4 (ERC-20 > $10 + NFTs) using v2 API"""
     # Get ERC-20 tokens with balance > $10 using BalanceUpdates
     erc20_query = """
     query MyQuery($address: String) {
@@ -362,12 +502,17 @@ def get_p4_assets(client: BitqueryClient, address: str) -> int:
     }
     """
     
+    print(f"\n  [DEBUG] P4 Assets Query (v2 API) for address: {address}")
+    
     unique_assets = set()
     nft_count = 0
+    total_time = 0.0
     
     # Get ERC-20 tokens
     try:
-        erc20_data = client.execute_query(erc20_query, {"address": address})
+        erc20_data, erc20_time = client.execute_query(erc20_query, {"address": address}, endpoint=BITQUERY_ENDPOINT_V2)
+        total_time += erc20_time
+        print(f"  [DEBUG] ERC-20 Query took: {erc20_time:.2f}s")
         balances = erc20_data.get("EVM", {}).get("BalanceUpdates", [])
         for balance in balances:
             # Only count if Balance_usd exists (meaning >= $10)
@@ -377,12 +522,17 @@ def get_p4_assets(client: BitqueryClient, address: str) -> int:
                 contract = currency.get("SmartContract", "")
                 if contract:
                     unique_assets.add(contract)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  [DEBUG] Error getting ERC-20 tokens: {str(e)}")
+        # Return 0 for assets if query fails
+        erc20_time = 0.0
+        total_time += erc20_time
     
     # Get NFTs - count individual NFTs (sum of balances), not collections
     try:
-        nft_data = client.execute_query(nft_query, {"address": address})
+        nft_data, nft_time = client.execute_query(nft_query, {"address": address}, endpoint=BITQUERY_ENDPOINT_V2)
+        total_time += nft_time
+        print(f"  [DEBUG] NFT Query took: {nft_time:.2f}s")
         nft_balances = nft_data.get("EVM", {}).get("BalanceUpdates", [])
         for nft_balance in nft_balances:
             balance_str = nft_balance.get("balance", "0")
@@ -391,55 +541,120 @@ def get_p4_assets(client: BitqueryClient, address: str) -> int:
                 nft_count += balance_value
             except (ValueError, TypeError):
                 pass
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"  [DEBUG] Error getting NFTs: {str(e)}")
+        # Continue with nft_count = 0 if query fails
+        nft_time = 0.0
+        total_time += nft_time
     
     # Total assets = ERC-20 tokens + individual NFT count
-    # According to the doc: "Holding any NFT adds 1 to the asset count" but the example shows
-    # counting individual NFTs (29 NFTs), so we'll use the sum of NFT balances
     total_assets = len(unique_assets) + nft_count
+    print(f"  [DEBUG] P4 Total Query Time: {total_time:.2f}s")
+    print(f"  [DEBUG] ERC-20 tokens (>= $10): {len(unique_assets)}, NFTs: {nft_count}, Total: {total_assets}")
     
-    return total_assets
+    return total_assets, total_time
 
 
 def calculate_defi_score(address: str, api_key: str, verbose: bool = True) -> Dict:
     """Calculate DeFi Strategy Score for an address"""
     client = BitqueryClient(api_key)
+    time_3yr_ago = get_time_3_years_ago()
     
     if verbose:
         print(f"Calculating DeFi Score for {address}...")
+        print(f"Time filter: 3 years ago ({time_3yr_ago})")
     
-    # P1: Transaction Count
+    overall_start = time.time()
+    
+    # Run queries in parallel
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        # Submit all queries
+        futures = {
+            "p1": executor.submit(get_p1_transaction_count, client, address, time_3yr_ago),
+            "p2_p3": executor.submit(get_p2_p3_data, client, address, time_3yr_ago),
+            "dex_nft": executor.submit(get_dex_and_nft_activity, client, address),
+            "p4": executor.submit(get_p4_assets, client, address),
+        }
+        
+        # Create reverse mapping from future to name
+        future_to_name = {future: name for name, future in futures.items()}
+        
+        # Collect results as they complete
+        results = {}
+        for future in as_completed(futures.values()):
+            name = future_to_name[future]
+            try:
+                result = future.result()
+                results[name] = result
+            except Exception as e:
+                if verbose:
+                    error_msg = str(e)
+                    print(f"  ✗ Error in {name} query: {error_msg}")
+                # Set default values based on query type
+                if name == "p1":
+                    results[name] = (0, 0.0)  # (tx_count, time)
+                elif name == "p2_p3":
+                    results[name] = (set(), set(), 0.0)  # (activity_types, protocols, time)
+                elif name == "dex_nft":
+                    results[name] = (0, 0, set(), 0.0)  # (dex_count, nft_count, protocols, time)
+                elif name == "p4":
+                    results[name] = (0, 0.0)  # (asset_count, time)
+                else:
+                    results[name] = None
+    
+    # Process P1 results
     if verbose:
-        print("  → Fetching transaction count (P1)...")
+        print("\n  → Processing results...")
+    
     try:
-        tx_count = get_p1_transaction_count(client, address)
-        p1_score = calculate_p1_score(tx_count)
-        if verbose:
-            print(f"  ✓ P1 calculated: {tx_count} transactions → {p1_score:.2f} points")
+        if results.get("p1") is not None:
+            tx_count, p1_time = results["p1"]
+            p1_score = calculate_p1_score(tx_count)
+            if verbose:
+                print(f"  ✓ P1 calculated: {tx_count} transactions → {p1_score:.2f} points (took {p1_time:.2f}s)")
+        else:
+            tx_count = 0
+            p1_score = 0.0
+            p1_time = 0.0
     except Exception as e:
         if verbose:
-            print(f"  ✗ Error calculating P1: {str(e)}")
+            print(f"  ✗ Error processing P1: {str(e)}")
         tx_count = 0
         p1_score = 0.0
+        p1_time = 0.0
     
-    # P2 & P3: Transaction Types and Protocols
-    if verbose:
-        print("  → Fetching protocol interactions (P2 & P3)...")
+    # Process P2/P3 results
+    dex_nft_time = 0.0
+    p2_p3_time = 0.0
+    
     try:
-        activity_types, interacted_protocols = get_p2_p3_data(client, address)
+        if results.get("p2_p3") is not None:
+            activity_types, interacted_protocols, p2_p3_time = results["p2_p3"]
+        else:
+            activity_types = set()
+            interacted_protocols = set()
         
-        # Check for DEX and NFT trading
-        has_dex, has_nft_trading = get_dex_and_nft_activity(client, address)
-        if has_dex:
-            activity_types.add("DEX Swaps")
-        if has_nft_trading:
-            activity_types.add("NFT Trading")
-        
-        # Check for governance
-        has_governance = get_governance_activity(client, address)
-        if has_governance:
-            activity_types.add("Governance")
+        # Add DEX/NFT results
+        if results.get("dex_nft") is not None:
+            try:
+                dex_count_fungible, dex_count_nonfungible, dex_protocols, dex_nft_time = results["dex_nft"]
+                
+                # Add DEX protocols to interacted_protocols for P3
+                if dex_protocols:
+                    interacted_protocols.update(dex_protocols)
+                    if verbose:
+                        print(f"  [DEBUG] Added {len(dex_protocols)} DEX protocols to P3")
+                
+                # Add activity types based on counts
+                if dex_count_fungible > 0:
+                    activity_types.add("ERC-20 Trading")
+                if dex_count_nonfungible > 0:
+                    activity_types.add("NFT Trading")
+                    
+            except (ValueError, TypeError) as e:
+                if verbose:
+                    print(f"  ⚠ Error unpacking DEX/NFT results: {str(e)}")
+                dex_nft_time = 0.0
         
         unique_types = len(activity_types)
         unique_protocols = len(interacted_protocols)
@@ -449,33 +664,55 @@ def calculate_defi_score(address: str, api_key: str, verbose: bool = True) -> Di
         
         if verbose:
             print(f"  ✓ P2 calculated: {unique_types} types → {p2_score:.2f} points")
+            print(f"    Activity types: {list(activity_types)}")
             print(f"  ✓ P3 calculated: {unique_protocols} protocols → {p3_score:.2f} points")
+            print(f"  ✓ P2/P3 queries took: {p2_p3_time:.2f}s + DEX/NFT: {dex_nft_time:.2f}s")
     except Exception as e:
         if verbose:
-            print(f"  ✗ Error calculating P2/P3: {str(e)}")
+            print(f"  ✗ Error processing P2/P3: {str(e)}")
+            import traceback
+            print(f"  Traceback: {traceback.format_exc()}")
         unique_types = 0
         unique_protocols = 0
         p2_score = 0.0
         p3_score = 0.0
     
-    # P4: Assets Held
-    if verbose:
-        print("  → Fetching asset holdings (P4)...")
+    # Process P4 results
     try:
-        unique_assets = get_p4_assets(client, address)
-        p4_score = calculate_p4_score(unique_assets)
-        if verbose:
-            print(f"  ✓ P4 calculated: {unique_assets} assets → {p4_score:.2f} points")
+        if results.get("p4") is not None:
+            unique_assets, p4_time = results["p4"]
+            p4_score = calculate_p4_score(unique_assets)
+            if verbose:
+                print(f"  ✓ P4 calculated: {unique_assets} assets → {p4_score:.2f} points (took {p4_time:.2f}s)")
+        else:
+            unique_assets = 0
+            p4_score = 0.0
+            p4_time = 0.0
     except Exception as e:
         if verbose:
-            print(f"  ✗ Error calculating P4: {str(e)}")
+            print(f"  ✗ Error processing P4: {str(e)}")
         unique_assets = 0
         p4_score = 0.0
+        p4_time = 0.0
     
     # Calculate final score
     avg_pillar_score = (p1_score + p2_score + p3_score + p4_score) / 4.0
     final_score = 25 + (avg_pillar_score * 0.75)
     final_score_rounded = round(final_score)
+    
+    total_time = time.time() - overall_start
+    
+    if verbose:
+        print(f"\n  {'='*60}")
+        print(f"  Query Timing Summary:")
+        print(f"  {'='*60}")
+        print(f"  P1 (Transaction Count):     {p1_time:.2f}s")
+        print(f"  P2/P3 (Protocols):          {p2_p3_time:.2f}s")
+        print(f"  DEX/NFT:                    {dex_nft_time:.2f}s")
+        print(f"  P4 (Assets):                {p4_time:.2f}s")
+        print(f"  {'='*60}")
+        print(f"  Total Time:                  {total_time:.2f}s")
+        print(f"  {'='*60}\n")
     
     return {
         "address": address,
