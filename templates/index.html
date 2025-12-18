@@ -674,7 +674,7 @@
             <!-- Sample wallet suggestion so users can see example data -->
             <datalist id="addressSuggestions">
               <option value="0x1898036f5dd9cf2ebd1595a6e3fc006a40a9e108">
-                Sample wallet with DeFi activity
+                Sample wallet with DeFi activity, replace with your own address
               </option>
             </datalist>
             <div class="error-message" id="errorMessage"></div>
@@ -971,6 +971,8 @@
       const modalClose = document.getElementById("modalClose");
       // Track the first recent wallet so we can optionally show sample data
       let firstRecentWallet = null;
+      // Cache of recent wallets for instant lookup (precomputed results)
+      let cachedWallets = [];
 
       // Check limit management
       const MAX_CHECKS = 3;
@@ -1110,6 +1112,9 @@
       }
 
       function displayRecentWallets(wallets) {
+        // Keep a local cache for quick lookup when a user submits a known address
+        cachedWallets = wallets.slice();
+
         if (wallets.length === 0) {
           recentWalletsDiv.innerHTML =
             '<div class="empty-recent">No wallets analyzed yet. Be the first!</div>';
@@ -1176,13 +1181,53 @@
           },
         };
 
-        displayResults(data);
+        // For the initial sample, don't auto-scroll
+        displayResults(data, false);
+      }
+
+      // Look up a wallet from the cached recent list (case-insensitive)
+      function getCachedWalletByAddress(address) {
+        const lower = address.toLowerCase();
+        return cachedWallets.find(
+          (w) => w.address && w.address.toLowerCase() === lower
+        );
       }
 
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
         const address = addressInput.value.trim();
+
+        // If we have a precomputed result for this address, show it instantly
+        const cached = getCachedWalletByAddress(address);
+        if (cached) {
+          const data = {
+            address: cached.address,
+            final_score_rounded: cached.final_score,
+            p1: {
+              score: cached.p1,
+              tx_count: cached.p1_tx_count ?? 0,
+            },
+            p2: {
+              score: cached.p2,
+              unique_types: cached.p2_unique_types ?? 0,
+            },
+            p3: {
+              score: cached.p3,
+              unique_protocols: cached.p3_unique_protocols ?? 0,
+            },
+            p4: {
+              score: cached.p4,
+              unique_assets: cached.p4_unique_assets ?? 0,
+            },
+          };
+
+          errorMessage.style.display = "none";
+          loading.style.display = "none";
+          searchBtn.disabled = false;
+          displayResults(data);
+          return;
+        }
 
         // Check if user has remaining checks (show modal every time if no checks and not unlimited)
         const remaining = getRemainingChecks();
@@ -1256,7 +1301,8 @@
         errorMessage.style.display = "block";
       }
 
-      function displayResults(data) {
+      // shouldScroll: whether to auto-scroll to the results section (default: true)
+      function displayResults(data, shouldScroll = true) {
         document.getElementById("finalScore").textContent =
           data.final_score_rounded;
         document.getElementById("addressDisplay").textContent = data.address;
@@ -1302,7 +1348,9 @@
             `;
 
         results.style.display = "block";
-        results.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (shouldScroll) {
+          results.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       }
     </script>
   </body>
