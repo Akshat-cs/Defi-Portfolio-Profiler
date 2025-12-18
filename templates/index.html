@@ -662,6 +662,7 @@
                 type="text"
                 class="search-input"
                 id="addressInput"
+                list="addressSuggestions"
                 placeholder="Enter Ethereum address (0x...)"
                 required
                 pattern="^0x[a-fA-F0-9]{40}$"
@@ -670,6 +671,12 @@
                 Analyze
               </button>
             </form>
+            <!-- Sample wallet suggestion so users can see example data -->
+            <datalist id="addressSuggestions">
+              <option value="0x1898036f5dd9cf2ebd1595a6e3fc006a40a9e108">
+                Sample wallet with DeFi activity
+              </option>
+            </datalist>
             <div class="error-message" id="errorMessage"></div>
             <div class="checks-counter" id="checksCounter">
               3/3 checks available
@@ -962,6 +969,8 @@
       const checksCounter = document.getElementById("checksCounter");
       const signupModal = document.getElementById("signupModal");
       const modalClose = document.getElementById("modalClose");
+      // Track the first recent wallet so we can optionally show sample data
+      let firstRecentWallet = null;
 
       // Check limit management
       const MAX_CHECKS = 3;
@@ -1091,6 +1100,9 @@
 
           if (data.success && data.data.length > 0) {
             displayRecentWallets(data.data);
+            // Keep the latest wallet as a sample for new users
+            firstRecentWallet = data.data[0];
+            showSampleWalletIfNoResults();
           }
         } catch (error) {
           // Silently handle error loading recent wallets
@@ -1132,6 +1144,39 @@
 
         tableHTML += "</tbody></table>";
         recentWalletsDiv.innerHTML = tableHTML;
+      }
+
+      // If we have a recent wallet and no results shown yet, use it as a sample
+      function showSampleWalletIfNoResults() {
+        if (!firstRecentWallet) return;
+        if (results.style.display === "block") return;
+
+        const wallet = firstRecentWallet;
+        // Prefill the input so users see a working example immediately
+        addressInput.value = wallet.address;
+
+        const data = {
+          address: wallet.address,
+          final_score_rounded: wallet.final_score,
+          p1: {
+            score: wallet.p1,
+            tx_count: wallet.p1_tx_count ?? 0,
+          },
+          p2: {
+            score: wallet.p2,
+            unique_types: wallet.p2_unique_types ?? 0,
+          },
+          p3: {
+            score: wallet.p3,
+            unique_protocols: wallet.p3_unique_protocols ?? 0,
+          },
+          p4: {
+            score: wallet.p4,
+            unique_assets: wallet.p4_unique_assets ?? 0,
+          },
+        };
+
+        displayResults(data);
       }
 
       form.addEventListener("submit", async (e) => {
