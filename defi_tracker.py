@@ -332,27 +332,28 @@ def get_p2_p3_data(client: BitqueryClient, address: str, time_3yr_ago: str) -> T
 def get_dex_and_nft_activity(client: BitqueryClient, address: str) -> Tuple[int, int, Set[str], float]:
     """Get DEX swaps and NFT trading activity using v2 API
     Returns: (dex_count_fungible, dex_count_nonfungible, dex_protocols, elapsed_time)
+    Query: https://ide.bitquery.io/Get-DEX-swaps-and-NFT-trading-activity-using-v2-API
     """
     query = """
-    query MyQuery($address: String) {
-      EVM(network: eth, aggregates: yes, dataset: combined) {
-        DEXTrades(
-          where: {Block: {Time: {since_relative: {years_ago: 3}}}, Transaction: {From: {is: $address}}, TransactionStatus: {Success: true}}
+    query TraderDexMarketsEvm($network: evm_network!, $trader: String!) {
+      EVM(network: $network) {
+        DEXTradeByTokens(
+          where: {TransactionStatus: {Success: true}, Block: {Time: {since_relative: {years_ago: 3}}}, any: [{Trade: {Seller: {is: $trader}}}, {Trade: {Buyer: {is: $trader}}}]}
         ) {
           dex_count_fungible: count(
             distinct: Trade_Dex_ProtocolName
-            if: {Trade: {Buy: {Currency: {Fungible: true}}}}
+            if: {Trade: {Currency: {Fungible: true}}}
           )
           dex_count_nonfungible: count(
             distinct: Trade_Dex_ProtocolName
-            if: {Trade: {Buy: {Currency: {Fungible: false}}}}
+            if: {Trade: {Currency: {Fungible: false}}}
           )
         }
       }
     }
     """
     
-    variables = {"address": address}
+    variables = {"network": "eth", "trader": address}
     print(f"\n  [DEBUG] DEX/NFT Query (v2 API) for address: {address}")
     
     try:
@@ -372,7 +373,7 @@ def get_dex_and_nft_activity(client: BitqueryClient, address: str) -> Tuple[int,
     dex_protocols = set()
     
     try:
-        trades = data.get("EVM", {}).get("DEXTrades", [{}])[0]
+        trades = data.get("EVM", {}).get("DEXTradeByTokens", [{}])[0]
         dex_count_fungible_str = trades.get("dex_count_fungible", "0")
         dex_count_nonfungible_str = trades.get("dex_count_nonfungible", "0")
         
