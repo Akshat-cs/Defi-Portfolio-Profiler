@@ -80,12 +80,19 @@ def calculate():
         result = calculate_defi_score(address, api_key, verbose=True)
         
         # Create new wallet entry
+        # NOTE: we store both scores and key metric counts so that
+        # previously analyzed wallets can be quickly reloaded on the UI
+        # without needing to call the API again.
         new_wallet = {
             'address': result['address'],
             'p1': result['p1']['score'],
+            'p1_tx_count': result['p1'].get('tx_count'),
             'p2': result['p2']['score'],
+            'p2_unique_types': result['p2'].get('unique_types'),
             'p3': result['p3']['score'],
+            'p3_unique_protocols': result['p3'].get('unique_protocols'),
             'p4': result['p4']['score'],
+            'p4_unique_assets': result['p4'].get('unique_assets'),
             'final_score': result['final_score_rounded']
         }
         
