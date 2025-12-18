@@ -99,6 +99,31 @@ ALL_PROTOCOL_ADDRESSES = []
 for addresses in PROTOCOL_ADDRESSES.values():
     ALL_PROTOCOL_ADDRESSES.extend(addresses)
 
+# Presaved response for sample wallet (to avoid API calls)
+SAMPLE_WALLET_ADDRESS = "0x6979B914f3A1d8C0fec2C1FD602f0e674cdf9862"
+SAMPLE_WALLET_RESPONSE = {
+    "address": SAMPLE_WALLET_ADDRESS,
+    "p1": {
+        "tx_count": 156,
+        "score": 100.0
+    },
+    "p2": {
+        "unique_types": 2,
+        "score": 25.0
+    },
+    "p3": {
+        "unique_protocols": 3,
+        "score": 28.57
+    },
+    "p4": {
+        "unique_assets": 29,
+        "score": 100.0
+    },
+    "average_pillar_score": 63.3925,
+    "final_score": 72.544375,
+    "final_score_rounded": 73
+}
+
 
 def get_time_3_years_ago() -> str:
     """Get ISO8601 timestamp for 3 years ago"""
@@ -558,6 +583,16 @@ def get_p4_assets(client: BitqueryClient, address: str) -> Tuple[int, float]:
 
 def calculate_defi_score(address: str, api_key: str, verbose: bool = True) -> Dict:
     """Calculate DeFi Strategy Score for an address"""
+    # Check if this is the sample wallet and return presaved response
+    if address.lower() == SAMPLE_WALLET_ADDRESS.lower():
+        if verbose:
+            print(f"Using presaved response for sample wallet: {address}")
+            print(f"  ✓ P1: {SAMPLE_WALLET_RESPONSE['p1']['tx_count']} transactions → {SAMPLE_WALLET_RESPONSE['p1']['score']:.2f} points")
+            print(f"  ✓ P2: {SAMPLE_WALLET_RESPONSE['p2']['unique_types']} types → {SAMPLE_WALLET_RESPONSE['p2']['score']:.2f} points")
+            print(f"  ✓ P3: {SAMPLE_WALLET_RESPONSE['p3']['unique_protocols']} protocols → {SAMPLE_WALLET_RESPONSE['p3']['score']:.2f} points")
+            print(f"  ✓ P4: {SAMPLE_WALLET_RESPONSE['p4']['unique_assets']} assets → {SAMPLE_WALLET_RESPONSE['p4']['score']:.2f} points")
+        return SAMPLE_WALLET_RESPONSE.copy()
+    
     client = BitqueryClient(api_key)
     time_3yr_ago = get_time_3_years_ago()
     
