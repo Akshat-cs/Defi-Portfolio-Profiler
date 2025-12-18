@@ -5,7 +5,6 @@ Flask web application for DeFi Portfolio Tracker
 
 from flask import Flask, render_template, request, jsonify
 import os
-import json
 from dotenv import load_dotenv
 from defi_tracker import calculate_defi_score
 
@@ -14,46 +13,48 @@ load_dotenv()
 
 # Application root path for subpath deployment
 # Can be overridden via SCRIPT_NAME environment variable
-# Defaults to empty for local development, set to '/ethereum-wallet-defi-score' in production
-APPLICATION_ROOT = os.environ.get('SCRIPT_NAME', '')
+APPLICATION_ROOT = os.environ.get('SCRIPT_NAME', '/ethereum-wallet-defi-score')
 
 app = Flask(__name__)
+
+# Configure application root for subpath deployment
 app.config['APPLICATION_ROOT'] = APPLICATION_ROOT
 
-# File path for storing recent wallets
-RECENT_WALLETS_FILE = 'recent_wallets.json'
+# In-memory storage for recent wallets (max 5)
+recent_wallets = []
 
-def load_recent_wallets():
-    """Load recent wallets from JSON file"""
-    if os.path.exists(RECENT_WALLETS_FILE):
-        try:
-            with open(RECENT_WALLETS_FILE, 'r') as f:
-                data = json.load(f)
-                # Ensure we only return the most recent 5
-                return data[:5] if isinstance(data, list) else []
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Error loading recent wallets: {e}")
-            return []
-    return []
 
-def save_recent_wallets(wallets):
-    """Save recent wallets to JSON file (keep only most recent 5)"""
-    try:
-        # Ensure we only save the most recent 5
-        wallets_to_save = wallets[:5] if len(wallets) > 5 else wallets
-        with open(RECENT_WALLETS_FILE, 'w') as f:
-            json.dump(wallets_to_save, f, indent=2)
-    except IOError as e:
-        print(f"Error saving recent wallets: {e}")
+def get_base_path():
+    """Get the base path from request or use default."""
+    # Try to get from SCRIPT_NAME (set by reverse proxy)
+    script_name = request.environ.get('SCRIPT_NAME', '')
+    if script_name:
+        return script_name
+    # Try to get from HTTP_X_SCRIPT_NAME (some proxies use this)
+    http_script_name = request.environ.get('HTTP_X_SCRIPT_NAME', '')
+    if http_script_name:
+        return http_script_name
+    # Try to detect from request path
+    path = request.path
+    if path.startswith('/ethereum-wallet-defi-score'):
+        return '/ethereum-wallet-defi-score'
+    # Fallback to configured APPLICATION_ROOT
+    return APPLICATION_ROOT
 
-# Load recent wallets on startup
-recent_wallets = load_recent_wallets()
 
+# ============================================================================
+# ROUTES - Dual registration for subpath deployment
+# ============================================================================
+
+@app.route(f'{APPLICATION_ROOT}/')
 @app.route('/')
 def index():
     """Main page with search form"""
-    return render_template('index.html', application_root=APPLICATION_ROOT)
+    base_path = get_base_path()
+    return render_template('index.html', base_path=base_path)
 
+
+@app.route(f'{APPLICATION_ROOT}/api/calculate', methods=['POST'])
 @app.route('/api/calculate', methods=['POST'])
 def calculate():
     """API endpoint to calculate DeFi score"""
@@ -80,9 +81,6 @@ def calculate():
         result = calculate_defi_score(address, api_key, verbose=True)
         
         # Create new wallet entry
-        # NOTE: we store both scores and key metric counts so that
-        # previously analyzed wallets can be quickly reloaded on the UI
-        # without needing to call the API again.
         new_wallet = {
             'address': result['address'],
             'p1': result['p1']['score'],
@@ -108,9 +106,6 @@ def calculate():
         # Keep only the most recent 5
         recent_wallets = recent_wallets[:5]
         
-        # Save to file
-        save_recent_wallets(recent_wallets)
-        
         return jsonify({
             'success': True,
             'data': result
@@ -121,9 +116,10 @@ def calculate():
         error_msg = str(e)
         print(f"ERROR in calculate endpoint: {error_msg}")
         print(f"Traceback: {traceback.format_exc()}")
-        # Ensure we return a proper error message
         return jsonify({'error': error_msg}), 500
 
+
+@app.route(f'{APPLICATION_ROOT}/api/recent', methods=['GET'])
 @app.route('/api/recent', methods=['GET'])
 def get_recent():
     """API endpoint to get recent wallet results"""
@@ -132,6 +128,12 @@ def get_recent():
         'data': list(recent_wallets)
     })
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5001)
 
+if __name__ == '__main__':
+    print(f"\n{'='*60}")
+    print(f"Ethereum Wallet DeFi Score")
+    print(f"APPLICATION_ROOT: {APPLICATION_ROOT}")
+    print(f"Access at: http://localhost:5001/")
+    print(f"      or: http://localhost:5001{APPLICATION_ROOT}/")
+    print(f"{'='*60}\n")
+    app.run(debug=True, host='0.0.0.0', port=5001)

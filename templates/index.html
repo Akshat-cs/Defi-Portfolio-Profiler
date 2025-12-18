@@ -206,6 +206,77 @@
         flex: 1;
       }
 
+      /* Tooltip styles */
+      .pillar-card {
+        position: relative;
+      }
+
+      .tooltip-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        background: #e0e0e0;
+        color: #666;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: help;
+        margin-left: 4px;
+        flex-shrink: 0;
+      }
+
+      .tooltip-icon:hover {
+        background: #0066ff;
+        color: white;
+      }
+
+      .tooltip-wrapper {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .tooltip-content {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1a1a1a;
+        color: white;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
+        line-height: 1.5;
+        white-space: normal;
+        width: 220px;
+        text-align: left;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        transition: opacity 0.2s, visibility 0.2s;
+      }
+
+      .tooltip-content::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #1a1a1a;
+      }
+
+      .tooltip-wrapper:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+      }
+
       .get-api-btn {
         font-size: 11px;
         font-weight: 500;
@@ -673,7 +744,7 @@
             </form>
             <!-- Sample wallet suggestion so users can see example data -->
             <datalist id="addressSuggestions">
-              <option value="0x1898036f5dd9cf2ebd1595a6e3fc006a40a9e108">
+              <option value="0x6979B914f3A1d8C0fec2C1FD602f0e674cdf9862">
                 Sample wallet with DeFi activity, replace with your own address
               </option>
             </datalist>
@@ -940,23 +1011,37 @@
     </div>
 
     <script>
-      // Application root for subpath deployment
-      const APPLICATION_ROOT = "{{ application_root|safe }}" || "";
+      // Set base path for API calls - auto-detect if not set
+      (function() {
+        const serverBasePath = '{{ base_path|default("", true) }}';
+        if (serverBasePath && serverBasePath.trim() !== '') {
+          window.APP_BASE_PATH = serverBasePath;
+        } else {
+          // Auto-detect from current location
+          const path = window.location.pathname;
+          if (path.includes('/ethereum-wallet-defi-score')) {
+            window.APP_BASE_PATH = '/ethereum-wallet-defi-score';
+          } else {
+            const parts = path.split('/').filter(p => p);
+            window.APP_BASE_PATH = parts.length > 0 ? '/' + parts[0] : '';
+          }
+        }
+      })();
 
       // Helper function to build API URLs
       function getApiUrl(path) {
         // Remove leading slash from path if present
         const cleanPath = path.startsWith("/") ? path.slice(1) : path;
-        // Handle APPLICATION_ROOT - remove trailing slash if present
-        let cleanRoot = APPLICATION_ROOT;
-        if (cleanRoot && cleanRoot.endsWith("/")) {
-          cleanRoot = cleanRoot.slice(0, -1);
+        // Handle base path - remove trailing slash if present
+        let basePath = window.APP_BASE_PATH || "";
+        if (basePath && basePath.endsWith("/")) {
+          basePath = basePath.slice(0, -1);
         }
-        // Build URL - if APPLICATION_ROOT is empty or just "/", use absolute path
-        if (!cleanRoot || cleanRoot === "/") {
+        // Build URL - if base path is empty or just "/", use absolute path
+        if (!basePath || basePath === "/") {
           return `/${cleanPath}`;
         }
-        return `${cleanRoot}/${cleanPath}`;
+        return `${basePath}/${cleanPath}`;
       }
 
       const form = document.getElementById("searchForm");
@@ -1312,6 +1397,10 @@
                 <div class="pillar-card">
                     <div class="pillar-title">
                       <span class="pillar-title-text">Transaction Count Score</span>
+                      <div class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <div class="tooltip-content">We calculate the total number of transactions signed by this address over the last 3 years. More activity = higher score.</div>
+                      </div>
                     </div>
                     <div class="pillar-score">${data.p1.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
@@ -1321,6 +1410,10 @@
                 <div class="pillar-card">
                     <div class="pillar-title">
                       <span class="pillar-title-text">Transaction Types Score</span>
+                      <div class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <div class="tooltip-content">Measures diversity of DeFi activities over the last 3 years: lending, staking, DEX trading, NFT trading, bridging, LP provision, and yield farming.</div>
+                      </div>
                     </div>
                     <div class="pillar-score">${data.p2.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
@@ -1330,6 +1423,10 @@
                 <div class="pillar-card">
                     <div class="pillar-title">
                       <span class="pillar-title-text">Protocols Used Score</span>
+                      <div class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <div class="tooltip-content">Counts unique DeFi protocols interacted with over the last 3 years, including Aave, Compound, Lido, Uniswap, and other major protocols.</div>
+                      </div>
                     </div>
                     <div class="pillar-score">${data.p3.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
@@ -1339,6 +1436,10 @@
                 <div class="pillar-card">
                     <div class="pillar-title">
                       <span class="pillar-title-text">Assets Held Score</span>
+                      <div class="tooltip-wrapper">
+                        <span class="tooltip-icon">?</span>
+                        <div class="tooltip-content">Evaluates portfolio diversity by counting ERC-20 tokens (worth ≥$10) and NFTs currently held by the address.</div>
+                      </div>
                     </div>
                     <div class="pillar-score">${data.p4.score.toFixed(2)}</div>
                     <div class="pillar-detail">${
